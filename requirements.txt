@@ -1,0 +1,6 @@
+streamlit
+scikit-learn==1.8.0
+numpy
+Pillow
+joblib
+scipy
