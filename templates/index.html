@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digit Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="grain"></div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="mark">⠿</span>
+    <span class="wordmark">DIGIT READER</span>
+    <span class="model-tag">{{ model_name }} · {{ test_acc }} accuracy</span>
+  </div>
+</header>
+
+<main>
+  <section class="intro">
+    <h1>Show it a number.<br>It reads it back.</h1>
+    <p class="sub">Every image gets reduced to an 8&times;8 grid of 16 gray levels &mdash;
+    the same resolution the model was trained on. That grid, not the photo, is what
+    decides the answer.</p>
+  </section>
+
+  <section class="stage">
+
+    <div class="upload-card" id="dropzone">
+      <input type="file" id="fileInput" accept="image/*" hidden>
+      <div class="upload-inner" id="uploadPrompt">
+        <div class="upload-icon">✎</div>
+        <p class="upload-title">Drop a digit image here</p>
+        <p class="upload-hint">or click to browse &mdash; PNG, JPG, one digit, any background</p>
+      </div>
+      <img id="previewImg" class="preview-img" hidden>
+    </div>
+
+    <div class="result-card" id="resultCard" hidden>
+      <div class="grid-wrap">
+        <div class="pixel-grid" id="pixelGrid"></div>
+        <span class="grid-caption">what the model sees</span>
+      </div>
+
+      <div class="verdict">
+        <div class="verdict-digit" id="verdictDigit">?</div>
+        <div class="verdict-meta">
+          <div class="confidence-row">
+            <span class="confidence-label">confidence</span>
+            <div class="confidence-bar"><div class="confidence-fill" id="confidenceFill"></div></div>
+            <span class="confidence-value" id="confidenceValue">&mdash;</span>
+          </div>
+          <div class="top3" id="top3"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="error-card" id="errorCard" hidden>
+      <p id="errorText"></p>
+    </div>
+
+  </section>
+
+  <button class="reset-btn" id="resetBtn" hidden>read another</button>
+</main>
+
+<footer>
+  <p>trained on scikit-learn's handwritten digit dataset · runs entirely on this server, no image is stored</p>
+</footer>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
