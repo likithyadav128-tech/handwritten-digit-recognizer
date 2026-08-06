@@ -37,18 +37,24 @@ def preprocess_image(pil_img, margin_frac=0.18):
     if arr.mean() > 127:
         arr = 255.0 - arr
 
-    # Threshold out near-background noise/compression artifacts
+    # Threshold and binarize. sklearn's load_digits images were built by
+    # binarizing a NIST bitmap and then counting the fraction of "on" pixels
+    # per 4x4 block to get each 0-16 cell value — a density count, not a
+    # smoothed grayscale resize. Binarizing here (instead of keeping
+    # continuous gray values) lets the later box-average resize reproduce
+    # that density count faithfully, and makes the result far less sensitive
+    # to stroke thickness (marker vs. pen).
     thresh = arr.max() * 0.15
-    arr[arr < thresh] = 0
+    binary = (arr > thresh).astype(np.float64)
 
     # Crop tightly to the digit's bounding box
-    rows = np.any(arr > 0, axis=1)
-    cols = np.any(arr > 0, axis=0)
+    rows = np.any(binary > 0, axis=1)
+    cols = np.any(binary > 0, axis=0)
     if not rows.any() or not cols.any():
         raise ValueError("No digit detected in image — try a clearer photo with more contrast.")
     rmin, rmax = np.where(rows)[0][[0, -1]]
     cmin, cmax = np.where(cols)[0][[0, -1]]
-    cropped = arr[rmin:rmax + 1, cmin:cmax + 1]
+    cropped = binary[rmin:rmax + 1, cmin:cmax + 1]
 
     # Pad proportional to the digit's own size (not a fixed pixel count).
     # sklearn's load_digits images sit with visible margin — the digit fills
@@ -64,10 +70,13 @@ def preprocess_image(pil_img, margin_frac=0.18):
     x_off = (size - w) // 2
     square[y_off:y_off + h, x_off:x_off + w] = cropped
 
-    # Resize straight to 8x8
-    img8 = Image.fromarray(square).resize((8, 8), Image.LANCZOS)
-    arr8 = np.clip(np.array(img8).astype(np.float64), 0, None)
-    arr8 = arr8 / 255.0 * 16.0 if arr8.max() > 16 else arr8
+    # Box-average downsample: each output cell becomes the fraction of "on"
+    # pixels in the corresponding source block — a density count, matching
+    # how the real dataset was built. (LANCZOS instead smooths edges together,
+    # which is what let a thick "4" blur into reading as "3".)
+    img_bin = Image.fromarray((square * 255).astype(np.uint8))
+    img8 = img_bin.resize((8, 8), Image.BOX)
+    arr8 = np.array(img8).astype(np.float64) / 255.0 * 16.0
     arr8 = np.clip(arr8, 0, 16)
 
     return arr8.flatten().reshape(1, -1)
