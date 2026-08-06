@@ -26,7 +26,7 @@ def load_model():
     return bundle["model"], bundle["model_name"], bundle["test_accuracy"]
 
 
-def preprocess_image(pil_img, pad_px=1):
+def preprocess_image(pil_img, margin_frac=0.18):
     """Convert an arbitrary PIL image of a single handwritten digit into an
     8x8, 16-gray-level array matching sklearn's `load_digits` format."""
 
@@ -50,9 +50,15 @@ def preprocess_image(pil_img, pad_px=1):
     cmin, cmax = np.where(cols)[0][[0, -1]]
     cropped = arr[rmin:rmax + 1, cmin:cmax + 1]
 
-    # Add a small fixed margin, keep square
+    # Pad proportional to the digit's own size (not a fixed pixel count).
+    # sklearn's load_digits images sit with visible margin — the digit fills
+    # roughly 70-80% of the 8x8 frame, not edge-to-edge. A fixed 1px pad on a
+    # high-res photo crop was effectively zero margin, so the digit filled
+    # ~99% of the frame and got distorted at 8x8 in a way the model never saw
+    # in training (this is what was turning "4" into "3").
     h, w = cropped.shape
-    size = max(h, w) + 2 * pad_px
+    pad = int(round(max(h, w) * margin_frac))
+    size = max(h, w) + 2 * pad
     square = np.zeros((size, size), dtype=np.float64)
     y_off = (size - h) // 2
     x_off = (size - w) // 2
